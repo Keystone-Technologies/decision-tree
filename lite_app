@@ -5,6 +5,7 @@ use Mojo::Log;
 use Mojo::Util 'slurp';
 
 use File::Basename;
+use File::Spec::Functions qw(catdir catfile);
 
 has log => sub { Mojo::Log->new };
 has dom => sub { Mojo::DOM->new(slurp shift->_file) };
@@ -13,6 +14,7 @@ has '_file';
 
 has 'dt';
 has 'branch';
+has 'home';
 
 has 'title';
 has 'description';
@@ -32,7 +34,7 @@ sub list_files {
 
 sub new {
   my $self = shift->SUPER::new(@_);
-  $self->_file($self->dt.".xml");
+  $self->_file(catfile $self->home, $self->dt.".xml");
   $self->title($self->dom->at('tree > title')->text);
   $self->description($self->dom->at('tree > description')->text);
   return $self unless $self->branch;
@@ -74,9 +76,9 @@ get '/' => sub {
 
 get "/:dt/#branch" => (headers => {"X-Requested-With" => qr/XMLHttpRequest/}) => {branch => 1} => sub {
   my $self = shift;
-  $self->stash(format => 'json') if $self->accepts('', 'json');;
+  $self->stash(format => 'json') if $self->accepts('', 'json');
   my ($dt, $branch) = ($self->param('dt'), $self->param('branch'));
-  $dt = DT->new(dt => $dt, branch => $branch);
+  $dt = DT->new(dt => $dt, branch => $branch, home => $self->app->home);
   $dt->prompt ? $self->render(dt => $dt) : $self->render_not_found;
 } => 'dt';
 
